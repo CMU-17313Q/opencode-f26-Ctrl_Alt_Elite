@@ -1,0 +1,6 @@
+Use this tool to quiz the user on their recent code changes. It generates multiple-choice questions from your analysis of the changes and asks the user to answer them.
+
+Usage notes:
+- Before calling this tool, inspect the code changes and write an analysis describing what changed and why
+- Pass that analysis as the `analysis` parameter; the questions are generated from it
+- The user answers each question by choosing one of the generated options
