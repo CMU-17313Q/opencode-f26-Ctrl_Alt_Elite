@@ -1,0 +1,13 @@
+Quiz me on my recent code changes so I can check that I understand them.
+
+Input: $ARGUMENTS
+
+1. Determine which changes to quiz on:
+   - No input (default): the uncommitted changes. Run `git diff`, `git diff --cached`, and `git status --short`, and read any untracked files.
+   - Otherwise: the commit, branch, or files named in the input.
+2. Read enough of the changed files to understand what changed and why.
+3. Write a short analysis of the changes: what changed, why it changed, and how it affects behavior.
+4. Call the `quiz` tool with that analysis. Do not write the quiz questions yourself.
+
+If there are no changes to quiz on, say so and do not call the `quiz` tool.
+Do not reveal or hint at the answers to the quiz questions.

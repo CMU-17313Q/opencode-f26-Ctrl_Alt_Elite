@@ -4,6 +4,7 @@ import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { PlanExitTool } from "./plan"
 import { Session } from "@/session/session"
 import { QuestionTool } from "./question"
+import { QuizTool } from "./quiz"
 import { ShellTool } from "./shell"
 import { EditTool } from "./edit"
 import { GlobTool } from "./glob"
@@ -24,6 +25,7 @@ import { Schema } from "effect"
 import z from "zod"
 import { Plugin } from "../plugin"
 import { Provider } from "@/provider/provider"
+import { Auth } from "@/auth"
 
 import { WebSearchTool } from "./websearch"
 import { LspTool } from "./lsp"
@@ -97,6 +99,7 @@ const layer = Layer.effect(
     const task = yield* TaskTool
     const read = yield* ReadTool
     const question = yield* QuestionTool
+    const quiz = yield* QuizTool
     const todo = yield* TodoWriteTool
     const lsptool = yield* LspTool
     const plan = yield* PlanExitTool
@@ -216,6 +219,7 @@ const layer = Layer.effect(
           skill: Tool.init(skilltool),
           patch: Tool.init(patchtool),
           question: Tool.init(question),
+          quiz: Tool.init(quiz),
           lsp: Tool.init(lsptool),
           plan: Tool.init(plan),
           ...(codeModeTool ? { execute: Tool.init(codeModeTool) } : {}),
@@ -225,7 +229,7 @@ const layer = Layer.effect(
           custom,
           builtin: [
             tool.invalid,
-            ...(questionEnabled ? [tool.question] : []),
+            ...(questionEnabled ? [tool.question, tool.quiz] : []),
             tool.shell,
             tool.read,
             tool.glob,
@@ -432,6 +436,7 @@ export const node = LayerNode.make({
     Session.node,
     BackgroundJob.node,
     Provider.node,
+    Auth.node,
     LSP.node,
     Instruction.node,
     FSUtil.node,
