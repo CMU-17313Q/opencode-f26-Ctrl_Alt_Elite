@@ -1091,6 +1091,10 @@ export function Prompt(props: PromptProps) {
       })
     } else {
       move.startSubmit()
+      const promptText =
+        inputText.trim() === "/diff --details"
+          ? "Summarize the current project's changes for later self-quizzing. Inspect the staged and unstaged git diffs and any untracked changed files. For each changed file, write 2-3 concise sentences in plain English explaining what changed and why it matters. Do not reproduce the raw diff, give a line-by-line recap, or turn this into a full code review."
+          : inputText
       sdk.client.session
         .prompt(
           {
@@ -1103,7 +1107,7 @@ export function Prompt(props: PromptProps) {
               ...editorParts,
               {
                 type: "text",
-                text: inputText,
+                text: promptText,
               },
               ...nonTextParts,
             ],
