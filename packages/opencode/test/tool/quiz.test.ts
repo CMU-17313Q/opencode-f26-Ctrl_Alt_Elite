@@ -36,6 +36,7 @@ const quiz = {
         { label: "Grow the array", description: "The array needs more room" },
       ],
       correctAnswer: "Allow index 0",
+      explanation: "The bounds check was changed to allow index 0 as a valid position.",
     },
     {
       question: "Which function now validates input?",
@@ -45,6 +46,7 @@ const quiz = {
         { label: "load", description: "The file loader" },
       ],
       correctAnswer: "parse",
+      explanation: "The parse function is the entry point that now validates all input.",
     },
   ],
 }
@@ -126,6 +128,8 @@ describe("tool.quiz", () => {
           question: "Why was the bounds check changed?",
           header: "Question 1",
           options: quiz.questions[0].options,
+          correctAnswer: quiz.questions[0].correctAnswer,
+          explanation: quiz.questions[0].explanation,
           multiple: false,
           custom: false,
         },
@@ -133,11 +137,15 @@ describe("tool.quiz", () => {
           question: "Which function now validates input?",
           header: "Question 2",
           options: quiz.questions[1].options,
+          correctAnswer: quiz.questions[1].correctAnswer,
+          explanation: quiz.questions[1].explanation,
           multiple: false,
           custom: false,
         },
       ])
-      expect(JSON.stringify(item)).not.toContain("correctAnswer")
+      // correctAnswer and explanation are now sent to the client for immediate feedback
+      expect(JSON.stringify(item)).toContain("correctAnswer")
+      expect(JSON.stringify(item)).toContain("explanation")
 
       yield* question.reply({ requestID: item.id, answers: [["Grow the array"], ["render"]] })
       const result = yield* Fiber.join(fiber)

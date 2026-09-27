@@ -38,7 +38,12 @@ export const QuizTool = Tool.define<typeof Parameters, Metadata, Question.Servic
             questions: quiz.questions.map((item, index) => ({
               question: item.question,
               header: `Question ${index + 1}`,
-              options: item.options,
+              options: item.options.map((opt) => ({
+                label: opt.label,
+                description: opt.description,
+              })),
+              correctAnswer: item.correctAnswer,
+              explanation: item.explanation,
               multiple: false,
               custom: false,
             })),

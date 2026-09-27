@@ -718,6 +718,8 @@ export type QuestionInfo = {
   options: Array<QuestionOption>
   multiple?: boolean
   custom?: boolean
+  correctAnswer?: string
+  explanation?: string
 }
 
 export type QuestionTool = {
@@ -3153,6 +3155,8 @@ export type QuestionV2Info = {
   options: Array<QuestionV2Option>
   multiple?: boolean
   custom?: boolean
+  correctAnswer?: string
+  explanation?: string
 }
 
 export type QuestionV2Tool = {
