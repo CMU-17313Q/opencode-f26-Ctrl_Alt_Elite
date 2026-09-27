@@ -37,6 +37,12 @@ export const Info = Schema.Struct({
   custom: Schema.Boolean.pipe(optional).annotate({
     description: "Allow typing a custom answer (default: true)",
   }),
+  correctAnswer: Schema.String.pipe(optional).annotate({
+    description: "The correct answer label (for quiz feedback)",
+  }),
+  explanation: Schema.String.pipe(optional).annotate({
+    description: "Explanation for the correct answer (for quiz feedback)",
+  }),
 }).annotate({ identifier: "QuestionV2.Info" })
 export interface Info extends Schema.Schema.Type<typeof Info> {}
 

@@ -17,6 +17,7 @@ export const QuizQuestion = Schema.Struct({
   question: Schema.String,
   options: Schema.Array(QuizOption),
   correctAnswer: Schema.String,
+  explanation: Schema.String,
 })
 
 export type QuizQuestion = typeof QuizQuestion.Type
@@ -29,18 +30,22 @@ export type Quiz = typeof Quiz.Type
 
 export function validateQuiz(quiz: Quiz) {
   for (const question of quiz.questions) {
-    const matchingAnswers = question.options.filter(
-      (option) => option.label === question.correctAnswer,
-    )
-
     if (question.options.length < 2) {
       throw new Error("Quiz questions must contain at least two answer choices")
     }
+
+    const matchingAnswers = question.options.filter(
+      (option) => option.label === question.correctAnswer,
+    )
 
     if (matchingAnswers.length !== 1) {
       throw new Error(
         "Each quiz question must have exactly one correct answer matching an option label",
       )
+    }
+
+    if (!question.explanation) {
+      throw new Error("Each quiz question must have an explanation")
     }
   }
 }
@@ -73,8 +78,8 @@ Each question must:
 - be directly related to the supplied code-change analysis
 - test what changed or why it changed
 - have multiple answer choices
-- have exactly one correct answer
-- use the exact label of the correct option in correctAnswer
+- have exactly one correct answer (use the exact label of the correct option in correctAnswer)
+- provide an explanation for the correct answer
 
 Generate 3 questions.`,
   ]

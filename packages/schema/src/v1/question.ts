@@ -27,6 +27,12 @@ const base = {
 export const Info = Schema.Struct({
   ...base,
   custom: Schema.optional(Schema.Boolean).annotate({ description: "Allow typing a custom answer (default: true)" }),
+  correctAnswer: Schema.optional(Schema.String).annotate({
+    description: "The correct answer label (for quiz feedback)",
+  }),
+  explanation: Schema.optional(Schema.String).annotate({
+    description: "Explanation for the correct answer (for quiz feedback)",
+  }),
 }).annotate({ identifier: "QuestionInfo" })
 export const Prompt = Schema.Struct(base).annotate({ identifier: "QuestionPrompt" })
 export const Tool = Schema.Struct({ messageID: SessionV1.MessageID, callID: Schema.String }).annotate({

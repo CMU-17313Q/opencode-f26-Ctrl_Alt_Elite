@@ -3,13 +3,20 @@ import { createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-j
 import { useRenderer } from "@opentui/solid"
 import type { TextareaRenderable } from "@opentui/core"
 import { selectedForeground, tint, useTheme } from "../../context/theme"
-import type { QuestionAnswer, QuestionRequest } from "@opencode-ai/sdk/v2"
+import type { QuestionAnswer, QuestionRequest, QuestionOption } from "@opencode-ai/sdk/v2"
 import { useSDK } from "../../context/sdk"
 import { SplitBorder } from "../../ui/border"
 import { useTuiConfig } from "../../config"
 import { useBindings, useOpencodeModeStack } from "../../keymap"
 
 const QUESTION_MODE = "question"
+
+interface QuestionFeedback {
+  submitted: boolean
+  correct: boolean
+  correctAnswer: string
+  explanation: string
+}
 
 export function QuestionPrompt(props: { request: QuestionRequest; directory?: string }) {
   const sdk = useSDK()
@@ -20,7 +27,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
 
   const questions = createMemo(() => props.request.questions)
   const single = createMemo(() => questions().length === 1 && questions()[0]?.multiple !== true)
-  const tabs = createMemo(() => (single() ? 1 : questions().length + 1)) // questions + confirm tab (no confirm for single select)
+  const tabs = createMemo(() => (single() ? 1 : questions().length + 1))
   const [tabHover, setTabHover] = createSignal<number | "confirm" | null>(null)
   const [store, setStore] = createStore({
     tab: 0,
@@ -28,6 +35,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
     custom: [] as string[],
     selected: 0,
     editing: false,
+    feedback: [] as QuestionFeedback[],
   })
 
   let textarea: TextareaRenderable | undefined
@@ -44,6 +52,9 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
     if (!value) return false
     return store.answers[store.tab]?.includes(value) ?? false
   })
+  const currentFeedback = createMemo(() => store.feedback[store.tab])
+  const hasFeedback = createMemo(() => currentFeedback()?.submitted ?? false)
+  const isSubmitted = createMemo(() => hasFeedback())
 
   function submit() {
     const answers = questions().map((_, i) => store.answers[i] ?? [])
@@ -54,6 +65,30 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
     })
   }
 
+  function submitCurrentQuestion() {
+    if (single()) return
+    const currentAnswer = store.answers[store.tab] ?? []
+    if (currentAnswer.length === 0) return
+
+    // Get correct answer and explanation from question level
+    const q = question()
+    const correctAnswer = q?.correctAnswer ?? ""
+    const explanation = q?.explanation ?? ""
+    const selectedAnswer = currentAnswer[0]
+    const isCorrect = correctAnswer === selectedAnswer
+
+    const feedback: QuestionFeedback = {
+      submitted: true,
+      correct: isCorrect,
+      correctAnswer,
+      explanation,
+    }
+
+    const feedbackArr = [...store.feedback]
+    feedbackArr[store.tab] = feedback
+    setStore("feedback", feedbackArr)
+  }
+
   function reject() {
     void sdk.client.question.reject({
       requestID: props.request.id,
@@ -62,6 +97,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
   }
 
   function pick(answer: string, custom: boolean = false) {
+    if (isSubmitted()) return
     const answers = [...store.answers]
     answers[store.tab] = [answer]
     setStore("answers", answers)
@@ -78,11 +114,11 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
       })
       return
     }
-    setStore("tab", store.tab + 1)
-    setStore("selected", 0)
+    // Don't auto-advance; user must press Enter or 'S' to submit for feedback
   }
 
   function toggle(answer: string) {
+    if (isSubmitted()) return
     const existing = store.answers[store.tab] ?? []
     const next = [...existing]
     const index = next.indexOf(answer)
@@ -94,6 +130,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
   }
 
   function moveTo(index: number) {
+    if (isSubmitted()) return
     setStore("selected", index)
   }
 
@@ -103,6 +140,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
   }
 
   function selectOption() {
+    if (isSubmitted()) return
     if (other()) {
       if (!multi()) {
         setStore("editing", true)
@@ -249,7 +287,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
         },
         ...(confirm()
           ? [
-              { key: "return", desc: "Submit answer", group: "Question", cmd: () => submit() },
+              { key: "return", desc: "Submit all answers", group: "Question", cmd: () => submit() },
               { key: "escape", desc: "Reject question", group: "Question", cmd: () => reject() },
               ...tuiConfig.keybinds.get("app.exit"),
             ]
@@ -259,25 +297,40 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
                 desc: `Select answer ${index + 1}`,
                 group: "Question",
                 cmd: () => {
-                  moveTo(index)
-                  selectOption()
+                  if (!isSubmitted()) {
+                    moveTo(index)
+                    selectOption()
+                  }
                 },
               })),
               {
                 key: "up",
                 desc: "Previous answer",
                 group: "Question",
-                cmd: () => moveTo((store.selected - 1 + total) % total),
+                cmd: () => {
+                  if (!isSubmitted()) moveTo((store.selected - 1 + total) % total)
+                },
               },
               {
                 key: "k",
                 desc: "Previous answer",
                 group: "Question",
-                cmd: () => moveTo((store.selected - 1 + total) % total),
+                cmd: () => {
+                  if (!isSubmitted()) moveTo((store.selected - 1 + total) % total)
+                },
               },
-              { key: "down", desc: "Next answer", group: "Question", cmd: () => moveTo((store.selected + 1) % total) },
-              { key: "j", desc: "Next answer", group: "Question", cmd: () => moveTo((store.selected + 1) % total) },
-              { key: "return", desc: "Select answer", group: "Question", cmd: () => selectOption() },
+              { key: "down", desc: "Next answer", group: "Question", cmd: () => {
+                if (!isSubmitted()) moveTo((store.selected + 1) % total)
+              } },
+              { key: "j", desc: "Next answer", group: "Question", cmd: () => {
+                if (!isSubmitted()) moveTo((store.selected + 1) % total)
+              } },
+              { key: "return", desc: "Next question", group: "Question", cmd: () => selectTab((store.tab + 1) % tabs()) },
+              ...(!isSubmitted()
+                ? [
+                    { key: "s", desc: "Submit for feedback", group: "Question", cmd: () => submitCurrentQuestion() },
+                  ]
+                : []),
               { key: "escape", desc: "Reject question", group: "Question", cmd: () => reject() },
               ...tuiConfig.keybinds.get("app.exit"),
             ]),
@@ -365,13 +418,14 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
                 {(opt, i) => {
                   const active = () => i() === store.selected
                   const picked = () => store.answers[store.tab]?.includes(opt.label) ?? false
+                  const disabled = isSubmitted()
                   return (
                     <box
-                      onMouseOver={() => moveTo(i())}
-                      onMouseDown={() => moveTo(i())}
+                      onMouseOver={() => !disabled && moveTo(i())}
+                      onMouseDown={() => !disabled && moveTo(i())}
                       onMouseUp={() => {
                         if (renderer.getSelection()?.getSelectedText()) return
-                        selectOption()
+                        if (!disabled) selectOption()
                       }}
                     >
                       <box flexDirection="row">
@@ -381,13 +435,10 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
                           </text>
                         </box>
                         <box backgroundColor={active() ? theme.backgroundElement : undefined}>
-                          <text fg={active() ? theme.secondary : picked() ? theme.success : theme.text}>
+                          <text fg={active() ? theme.secondary : picked() ? theme.accent : theme.text}>
                             {multi() ? `[${picked() ? "✓" : " "}] ${opt.label}` : opt.label}
                           </text>
                         </box>
-                        <Show when={!multi()}>
-                          <text fg={theme.success}>{picked() ? " ✓" : ""}</text>
-                        </Show>
                       </box>
 
                       <box paddingLeft={3}>
@@ -399,11 +450,11 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
               </For>
               <Show when={custom()}>
                 <box
-                  onMouseOver={() => moveTo(options().length)}
-                  onMouseDown={() => moveTo(options().length)}
+                  onMouseOver={() => !isSubmitted() && moveTo(options().length)}
+                  onMouseDown={() => !isSubmitted() && moveTo(options().length)}
                   onMouseUp={() => {
                     if (renderer.getSelection()?.getSelectedText()) return
-                    selectOption()
+                    if (!isSubmitted()) selectOption()
                   }}
                 >
                   <box flexDirection="row">
@@ -413,16 +464,12 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
                       </text>
                     </box>
                     <box backgroundColor={other() ? theme.backgroundElement : undefined}>
-                      <text fg={other() ? theme.secondary : customPicked() ? theme.success : theme.text}>
+                      <text fg={other() ? theme.secondary : customPicked() ? theme.accent : theme.text}>
                         {multi() ? `[${customPicked() ? "✓" : " "}] Type your own answer` : "Type your own answer"}
                       </text>
                     </box>
-
-                    <Show when={!multi()}>
-                      <text fg={theme.success}>{customPicked() ? " ✓" : ""}</text>
-                    </Show>
                   </box>
-                  <Show when={store.editing}>
+                  <Show when={store.editing && !isSubmitted()}>
                     <box paddingLeft={3}>
                       <textarea
                         ref={(val: TextareaRenderable) => {
@@ -453,6 +500,25 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
                 </box>
               </Show>
             </box>
+            <Show when={hasFeedback() && !multi()}>
+              <box paddingLeft={1} gap={1} border={["top"]} borderColor={theme.border}>
+                <text fg={currentFeedback()?.correct ? theme.success : theme.error}>
+                  {currentFeedback()?.correct ? "✓ Correct!" : "✗ Incorrect"}
+                </text>
+                <text fg={theme.text}>
+                  Correct answer: {currentFeedback()?.correctAnswer}
+                </text>
+                <text fg={theme.textMuted}>
+                  {currentFeedback()?.explanation}
+                </text>
+                <text fg={theme.textMuted}>Press → or Tab for next question, or Enter to submit all</text>
+              </box>
+            </Show>
+            <Show when={hasFeedback() && multi()}>
+              <box paddingLeft={1} gap={1} border={["top"]} borderColor={theme.border}>
+                <text fg={theme.textMuted}>Press → or Tab for next question, or Enter to submit all</text>
+              </box>
+            </Show>
           </box>
         </Show>
 
@@ -498,12 +564,16 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
               {"↑↓"} <span style={{ fg: theme.textMuted }}>select</span>
             </text>
           </Show>
-          <text fg={theme.text}>
-            enter{" "}
-            <span style={{ fg: theme.textMuted }}>
-              {confirm() ? "submit" : multi() ? "toggle" : single() ? "submit" : "confirm"}
-            </span>
-          </text>
+          <Show when={!confirm()}>
+            <text fg={theme.text}>
+              enter <span style={{ fg: theme.textMuted }}>next question</span>
+            </text>
+          </Show>
+          <Show when={!confirm() && !isSubmitted()}>
+            <text fg={theme.text}>
+              s <span style={{ fg: theme.textMuted }}>submit for feedback</span>
+            </text>
+          </Show>
 
           <text fg={theme.text}>
             esc <span style={{ fg: theme.textMuted }}>dismiss</span>
