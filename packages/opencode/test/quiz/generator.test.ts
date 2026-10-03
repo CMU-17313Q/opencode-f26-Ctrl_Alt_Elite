@@ -89,6 +89,7 @@ describe("QuizGenerator validation", () => {
               },
             ],
             correctAnswer: "Allow index 0",
+            explanation: "This question contains duplicate matching answers.",
           },
         ],
       }),
