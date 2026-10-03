@@ -72,6 +72,32 @@ describe("QuizGenerator validation", () => {
     )
   })
 
+  test("rejects a question with more than one matching correct answer", () => {
+    expect(() =>
+      validateQuiz({
+        questions: [
+          {
+            question: "Why was the bounds check changed?",
+            options: [
+              {
+                label: "Allow index 0",
+                description: "Index 0 is a valid position",
+              },
+              {
+                label: "Allow index 0",
+                description: "Duplicate correct answer",
+              },
+            ],
+            correctAnswer: "Allow index 0",
+            explanation: "This question contains duplicate matching answers.",
+          },
+        ],
+      }),
+    ).toThrow(
+      "Each quiz question must have exactly one correct answer matching an option label",
+    )
+  })
+
   test("returns true when the selected answer is correct", () => {
     const question = {
       question: "Why was the bounds check changed?",
