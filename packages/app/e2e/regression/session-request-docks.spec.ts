@@ -73,6 +73,82 @@ test("shows a pending question dock", async ({ page }) => {
   expect((await reply).postDataJSON()).toEqual({ answers: [["Minimal"]] })
 })
 
+test("shows multiple choice quiz questions without a custom answer", async ({ page }) => {
+  const quiz = [
+    {
+      question: "What does the new helper return?",
+      options: [
+        { label: "A string", description: "The formatted label" },
+        { label: "A number", description: "The option count" },
+        { label: "A boolean", description: "Whether the option is picked" },
+      ],
+    },
+    {
+      question: "Why was the change made?",
+      options: [
+        { label: "Performance", description: "Avoid extra renders" },
+        { label: "Correctness", description: "Fix a stale value" },
+      ],
+    },
+    {
+      question: "Which file owns the behavior?",
+      options: [
+        { label: "dock.tsx", description: "The dock component" },
+        { label: "state.ts", description: "The composer state" },
+        { label: "tree.ts", description: "The request tree" },
+        { label: "index.ts", description: "The barrel export" },
+      ],
+    },
+  ]
+  await mockServer(page, {
+    questions: [
+      {
+        id: "question-quiz",
+        sessionID,
+        questions: quiz.map((item, index) => ({
+          ...item,
+          header: `Question ${index + 1}`,
+          multiple: false,
+          custom: false,
+        })),
+      },
+    ],
+  })
+
+  await page.goto(`/${base64Encode(directory)}/session/${sessionID}`)
+  await expectSessionTitle(page, title)
+
+  const question = page.locator('[data-component="dock-prompt"][data-kind="question"]')
+  await expect(question).toBeVisible()
+  await expect(question.getByText("1 of 3 questions")).toBeVisible()
+
+  const picks = ["A boolean", "Correctness", "tree.ts"]
+  for (const [index, item] of quiz.entries()) {
+    await expect(question.getByText(item.question)).toBeVisible()
+    await expect(question.getByRole("radio")).toHaveCount(item.options.length)
+    for (const option of item.options) {
+      await expect(question.getByRole("radio", { name: new RegExp(option.label) })).toBeVisible()
+      await expect(question.getByText(option.description)).toBeVisible()
+    }
+    await expect(question.locator('[data-custom="true"]')).toHaveCount(0)
+    await expect(question.getByText("Type your own answer")).toHaveCount(0)
+
+    const pick = question.getByRole("radio", { name: new RegExp(picks[index]) })
+    await pick.click()
+    await expect(pick).toHaveAttribute("aria-checked", "true")
+    await expect(question.locator('[data-slot="question-option"][data-picked="true"]')).toHaveCount(1)
+    if (index < quiz.length - 1) await question.getByRole("button", { name: "Next" }).click()
+  }
+
+  const reply = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === `/api/session/${sessionID}/question/question-quiz/reply`,
+  )
+  await question.getByRole("button", { name: "Submit" }).click()
+  expect((await reply).postDataJSON()).toEqual({ answers: picks.map((pick) => [pick]) })
+})
+
 test("shows a pending permission dock", async ({ page }) => {
   await mockServer(page, {
     permissions: [

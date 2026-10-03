@@ -9,6 +9,7 @@ import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 import PROMPT_REVIEW from "./template/review.txt"
+import PROMPT_QUIZ from "./template/quiz.txt"
 import { LegacyEvent } from "@opencode-ai/schema/legacy-event"
 
 type State = {
@@ -46,6 +47,7 @@ export function hints(template: string) {
 export const Default = {
   INIT: "init",
   REVIEW: "review",
+  QUIZ: "quiz",
 } as const
 
 export interface Interface {
@@ -85,6 +87,13 @@ const layer = Layer.effect(
         },
         subtask: true,
         hints: hints(PROMPT_REVIEW),
+      }
+      commands[Default.QUIZ] = {
+        name: Default.QUIZ,
+        description: "quiz yourself on changes [commit|branch|files], defaults to uncommitted",
+        source: "command",
+        template: PROMPT_QUIZ,
+        hints: hints(PROMPT_QUIZ),
       }
 
       for (const [name, command] of Object.entries(cfg.command ?? {})) {

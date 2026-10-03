@@ -19,6 +19,7 @@ describe("QuizGenerator validation", () => {
               },
             ],
             correctAnswer: "Allow index 0",
+            explanation: "The bounds check was changed to allow index 0 as a valid position.",
           },
         ],
       }),
@@ -38,6 +39,7 @@ describe("QuizGenerator validation", () => {
               },
             ],
             correctAnswer: "One choice",
+            explanation: "Only one choice provided.",
           },
         ],
       }),
@@ -61,6 +63,7 @@ describe("QuizGenerator validation", () => {
               },
             ],
             correctAnswer: "Choice C",
+            explanation: "This should fail.",
           },
         ],
       }),
@@ -108,6 +111,7 @@ describe("QuizGenerator validation", () => {
         },
       ],
       correctAnswer: "Allow index 0",
+      explanation: "The bounds check was changed to allow index 0 as a valid position.",
     }
 
     expect(checkAnswer(question, "Allow index 0")).toBe(true)
@@ -127,6 +131,7 @@ describe("QuizGenerator validation", () => {
         },
       ],
       correctAnswer: "Allow index 0",
+      explanation: "The bounds check was changed to allow index 0 as a valid position.",
     }
 
     expect(checkAnswer(question, "Increase array size")).toBe(false)
