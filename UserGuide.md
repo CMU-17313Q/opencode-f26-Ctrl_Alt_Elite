@@ -27,3 +27,29 @@ From the repository root, run:
 ```bash
 cd packages/opencode
 bun test test/quiz/generator.test.ts
+```
+
+A successful run should show all 6 tests passing.
+
+### Automated Test Coverage
+
+The automated tests verify that:
+
+- A valid quiz with multiple answer choices and one matching correct answer is accepted.
+- A question with fewer than two answer choices is rejected.
+- A question whose correct answer does not match any answer choice is rejected.
+- A question with more than one answer choice matching the correct answer is rejected.
+- Selecting the correct answer returns `true`.
+- Selecting an incorrect answer returns `false`.
+
+These tests cover both valid and invalid quiz structures as well as the answer-checking behavior. This verifies the main requirements of question generation and answer checking, including having multiple choices, exactly one matching correct answer, and correctly determining whether a student's selected answer is correct.
+
+### Implementation Files
+
+The quiz generation and answer-checking implementation is located at:
+
+`packages/opencode/src/quiz/generator.ts`
+
+The automated tests are located at:
+
+`packages/opencode/test/quiz/generator.test.ts`
