@@ -53,3 +53,48 @@ The quiz generation and answer-checking implementation is located at:
 The automated tests are located at:
 
 `packages/opencode/test/quiz/generator.test.ts`
+
+## Multiple-Choice Question Display
+
+### Feature Overview
+
+Quiz questions are displayed using OpenCode's existing question dock. For multiple-choice quiz questions, `custom` is set to `false`, so students only see the provided answer choices and do not see the free-response option.
+
+### How to Test the Feature
+
+Start a quiz and check that each question only displays the provided multiple-choice options. Select an answer, move between the questions, and submit the quiz. There should be no custom free-response option.
+
+The automated E2E test for this feature is located at:
+
+`packages/app/e2e/regression/session-request-docks.spec.ts`
+
+From the repository root, run:
+
+```bash
+cd packages/app
+bunx playwright test e2e/regression/session-request-docks.spec.ts
+```
+
+A successful run should show all 4 tests passing.
+
+### Automated Test Coverage
+
+The E2E test uses a three-question multiple-choice quiz and verifies that:
+
+- The questions and answer options are displayed correctly.
+- The custom free-response option is not shown.
+- A student can select an answer.
+- A student can move between questions.
+- The answers can be submitted successfully.
+
+This test covers the user-facing behavior changed for the multiple-choice question display by testing the full interaction through the question dock.
+
+### Implementation Files
+
+The multiple-choice display behavior is implemented in:
+
+`packages/app/src/pages/session/composer/session-question-dock.tsx`
+
+The E2E test is located at:
+
+`packages/app/e2e/regression/session-request-docks.spec.ts`
