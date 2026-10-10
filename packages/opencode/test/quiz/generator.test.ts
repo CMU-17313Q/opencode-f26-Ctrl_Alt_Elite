@@ -98,6 +98,30 @@ describe("QuizGenerator validation", () => {
     )
   })
 
+  test("rejects a question without an explanation", () => {
+    expect(() =>
+      validateQuiz({
+        questions: [
+          {
+            question: "Why was the bounds check changed?",
+            options: [
+              {
+                label: "Allow index 0",
+                description: "Index 0 is a valid position",
+              },
+              {
+                label: "Increase array size",
+                description: "Changes the array size",
+              },
+            ],
+            correctAnswer: "Allow index 0",
+            explanation: "",
+          },
+        ],
+      }),
+    ).toThrow("Each quiz question must have an explanation")
+  })
+
   test("returns true when the selected answer is correct", () => {
     const question = {
       question: "Why was the bounds check changed?",
