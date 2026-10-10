@@ -32,6 +32,7 @@ import { promptOffsetWidth } from "../../prompt/display"
 import { createStore, produce, unwrap } from "solid-js/store"
 import { usePromptHistory, type PromptInfo } from "../../prompt/history"
 import { computePromptTraits } from "../../prompt/traits"
+import { promptTextWithDiffDetails } from "../../prompt/diff-details"
 import { expandPastedTextPlaceholders, expandTrackedPastedText } from "../../prompt/part"
 import { usePromptStash } from "../../prompt/stash"
 import { DialogStash } from "../dialog-stash"
@@ -1091,10 +1092,6 @@ export function Prompt(props: PromptProps) {
       })
     } else {
       move.startSubmit()
-      const promptText =
-        inputText.trim() === "/diff --details"
-          ? "Summarize the current project's changes for later self-quizzing. Inspect the staged and unstaged git diffs and any untracked changed files. For each changed file, write 2-3 concise sentences in plain English explaining what changed and why it matters. Do not reproduce the raw diff, give a line-by-line recap, or turn this into a full code review."
-          : inputText
       sdk.client.session
         .prompt(
           {
@@ -1107,7 +1104,7 @@ export function Prompt(props: PromptProps) {
               ...editorParts,
               {
                 type: "text",
-                text: promptText,
+                text: promptTextWithDiffDetails(inputText),
               },
               ...nonTextParts,
             ],
