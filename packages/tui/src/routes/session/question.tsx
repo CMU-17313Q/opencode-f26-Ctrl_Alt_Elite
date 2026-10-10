@@ -8,15 +8,9 @@ import { useSDK } from "../../context/sdk"
 import { SplitBorder } from "../../ui/border"
 import { useTuiConfig } from "../../config"
 import { useBindings, useOpencodeModeStack } from "../../keymap"
+import { questionFeedback, type QuestionFeedback } from "./question-feedback"
 
 const QUESTION_MODE = "question"
-
-interface QuestionFeedback {
-  submitted: boolean
-  correct: boolean
-  correctAnswer: string
-  explanation: string
-}
 
 export function QuestionPrompt(props: { request: QuestionRequest; directory?: string }) {
   const sdk = useSDK()
@@ -35,7 +29,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
     custom: [] as string[],
     selected: 0,
     editing: false,
-    feedback: [] as QuestionFeedback[],
+    feedback: [] as (QuestionFeedback | undefined)[],
   })
 
   let textarea: TextareaRenderable | undefined
@@ -52,8 +46,10 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
     if (!value) return false
     return store.answers[store.tab]?.includes(value) ?? false
   })
+  // Quiz questions (multi-question prompts with a correctAnswer) are answered one at a time with feedback.
+  const quiz = createMemo(() => !single() && !multi() && question()?.correctAnswer !== undefined)
   const currentFeedback = createMemo(() => store.feedback[store.tab])
-  const hasFeedback = createMemo(() => currentFeedback()?.submitted ?? false)
+  const hasFeedback = createMemo(() => currentFeedback() !== undefined)
   const isSubmitted = createMemo(() => hasFeedback())
 
   function submit() {
@@ -66,24 +62,9 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
   }
 
   function submitCurrentQuestion() {
-    if (single()) return
-    const currentAnswer = store.answers[store.tab] ?? []
-    if (currentAnswer.length === 0) return
-
-    // Get correct answer and explanation from question level
-    const q = question()
-    const correctAnswer = q?.correctAnswer ?? ""
-    const explanation = q?.explanation ?? ""
-    const selectedAnswer = currentAnswer[0]
-    const isCorrect = correctAnswer === selectedAnswer
-
-    const feedback: QuestionFeedback = {
-      submitted: true,
-      correct: isCorrect,
-      correctAnswer,
-      explanation,
-    }
-
+    if (!quiz()) return
+    const feedback = questionFeedback(question(), store.answers[store.tab])
+    if (!feedback) return
     const feedbackArr = [...store.feedback]
     feedbackArr[store.tab] = feedback
     setStore("feedback", feedbackArr)
@@ -114,7 +95,9 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
       })
       return
     }
-    // Don't auto-advance; user must press Enter or 'S' to submit for feedback
+    // Quiz questions wait for 's' so the user can review their choice before seeing feedback.
+    if (quiz()) return
+    selectTab(store.tab + 1)
   }
 
   function toggle(answer: string) {
@@ -325,8 +308,10 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
               { key: "j", desc: "Next answer", group: "Question", cmd: () => {
                 if (!isSubmitted()) moveTo((store.selected + 1) % total)
               } },
-              { key: "return", desc: "Next question", group: "Question", cmd: () => selectTab((store.tab + 1) % tabs()) },
-              ...(!isSubmitted()
+              quiz()
+                ? { key: "return", desc: "Next question", group: "Question", cmd: () => selectTab((store.tab + 1) % tabs()) }
+                : { key: "return", desc: "Select answer", group: "Question", cmd: () => selectOption() },
+              ...(quiz() && !isSubmitted()
                 ? [
                     { key: "s", desc: "Submit for feedback", group: "Question", cmd: () => submitCurrentQuestion() },
                   ]
@@ -500,7 +485,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
                 </box>
               </Show>
             </box>
-            <Show when={hasFeedback() && !multi()}>
+            <Show when={hasFeedback()}>
               <box paddingLeft={1} gap={1} border={["top"]} borderColor={theme.border}>
                 <text fg={currentFeedback()?.correct ? theme.success : theme.error}>
                   {currentFeedback()?.correct ? "✓ Correct!" : "✗ Incorrect"}
@@ -511,12 +496,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
                 <text fg={theme.textMuted}>
                   {currentFeedback()?.explanation}
                 </text>
-                <text fg={theme.textMuted}>Press → or Tab for next question, or Enter to submit all</text>
-              </box>
-            </Show>
-            <Show when={hasFeedback() && multi()}>
-              <box paddingLeft={1} gap={1} border={["top"]} borderColor={theme.border}>
-                <text fg={theme.textMuted}>Press → or Tab for next question, or Enter to submit all</text>
+                <text fg={theme.textMuted}>Press Enter or Tab for the next question</text>
               </box>
             </Show>
           </box>
@@ -564,12 +544,21 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
               {"↑↓"} <span style={{ fg: theme.textMuted }}>select</span>
             </text>
           </Show>
-          <Show when={!confirm()}>
-            <text fg={theme.text}>
-              enter <span style={{ fg: theme.textMuted }}>next question</span>
-            </text>
-          </Show>
-          <Show when={!confirm() && !isSubmitted()}>
+          <text fg={theme.text}>
+            enter{" "}
+            <span style={{ fg: theme.textMuted }}>
+              {confirm()
+                ? "submit"
+                : quiz()
+                  ? "next question"
+                  : multi()
+                    ? "toggle"
+                    : single()
+                      ? "submit"
+                      : "confirm"}
+            </span>
+          </text>
+          <Show when={quiz() && !isSubmitted()}>
             <text fg={theme.text}>
               s <span style={{ fg: theme.textMuted }}>submit for feedback</span>
             </text>
