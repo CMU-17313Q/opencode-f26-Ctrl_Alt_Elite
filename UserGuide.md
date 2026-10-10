@@ -180,3 +180,91 @@ The `quiz` tool is added to OpenCode's built-in tools in:
 The automated tests are located at:
 
 `packages/opencode/test/tool/quiz.test.ts`
+
+## Immediate Feedback on Quiz Questions
+
+### Feature Overview
+
+When a quiz is shown in the terminal UI (TUI), students can check each question as they go instead of waiting until the end of the quiz. After picking an answer, the student presses `s` to submit that question for feedback. The TUI then shows:
+
+- `✓ Correct!` or `✗ Incorrect`
+- The correct answer
+- An explanation of why it is correct
+
+Once a question is submitted it is locked, so the answer cannot be changed after the correct answer has been revealed. The student then presses Enter or Tab to go to the next question, and submits the whole quiz from the Review tab as before.
+
+To support this, the quiz generator now asks the model for an `explanation` for every question, and `validateQuiz` rejects any question without one. The `quiz` tool sends each question's `correctAnswer` and `explanation` along with the question so the TUI can show feedback without another request to the server. The tool's output to the agent still only lists the student's answers.
+
+Feedback is only used for quiz questions, which are the ones that include a `correctAnswer`. Regular questions that the agent asks with the `question` tool behave the same as before: Enter selects the highlighted answer, and there is no `s` key or feedback.
+
+### How to Test the Feature
+
+To test immediate feedback manually:
+
+1. From the repository root, start OpenCode in the terminal with `bun dev`, inside a project that is a git repository.
+2. Make a small uncommitted change in that project.
+3. Type `/quiz` and press Enter. After a few seconds, the quiz questions appear at the bottom of the TUI.
+4. Press the number key of an answer (for example `1`) to select it, or click it. Then press `s`.
+5. Check that the TUI shows whether the answer was correct, the correct answer, and an explanation, and that the arrow keys and number keys no longer change the answer.
+6. Press Enter to move to the next question. Choose a wrong answer on purpose and press `s` to check that `✗ Incorrect` and the correct answer are shown.
+7. Answer the remaining questions, go to the Review tab, and press Enter to submit the quiz.
+8. To check that regular questions are unaffected, ask the agent to "ask me a question with the question tool, with three options". Pressing Enter should select the highlighted answer, and the footer should not show `s submit for feedback`.
+
+The automated tests for this feature are located at:
+
+- `packages/tui/test/question-feedback.test.ts`
+- `packages/opencode/test/quiz/generator.test.ts`
+- `packages/opencode/test/tool/quiz.test.ts`
+
+From the repository root, run:
+
+```bash
+cd packages/tui
+bun test test/question-feedback.test.ts
+cd ../opencode
+bun test test/quiz/generator.test.ts test/tool/quiz.test.ts
+```
+
+A successful run should show 7 tests passing in `packages/tui` and 10 tests passing in `packages/opencode`.
+
+### Automated Test Coverage
+
+The logic that decides what feedback to show is in `questionFeedback`, a small function the TUI calls when the student presses `s`. Keeping it separate from the UI code means it can be tested directly.
+
+`packages/tui/test/question-feedback.test.ts` verifies that:
+
+- A correct answer is marked correct, and the correct answer and explanation are returned.
+- A wrong answer is marked incorrect, and the correct answer is still shown.
+- Answers are compared exactly, so different capitalization or extra spaces are not counted as correct.
+- No feedback is given if the student has not picked an answer yet.
+- No feedback is given for regular agent questions that do not have a `correctAnswer`.
+- A missing explanation does not break the feedback.
+
+`packages/opencode/test/quiz/generator.test.ts` verifies that a generated question without an explanation is rejected, along with the existing checks that every question has at least two choices and exactly one correct answer.
+
+`packages/opencode/test/tool/quiz.test.ts` verifies that the `quiz` tool sends each question's `correctAnswer` and `explanation` to the question dock, while the tool's output to the agent still does not include the correct answers.
+
+Together these cover the acceptance criteria for this feature: the data needed for feedback is generated and validated on the server, it reaches the question dock, and the TUI computes the right result for correct, incorrect, and unanswered questions without affecting regular questions. Locking a question after it is submitted and the key bindings are UI behavior, so they are covered by the manual steps above.
+
+### Implementation Files
+
+The feedback logic is in:
+
+`packages/tui/src/routes/session/question-feedback.ts`
+
+The TUI question prompt, including the `s` key, locking submitted questions, and showing feedback, is in:
+
+`packages/tui/src/routes/session/question.tsx`
+
+The `correctAnswer` and `explanation` fields are added to the question schema in:
+
+`packages/schema/src/question.ts`
+`packages/schema/src/v1/question.ts`
+
+The quiz generator, which asks the model for explanations and validates them, is in:
+
+`packages/opencode/src/quiz/generator.ts`
+
+The `quiz` tool, which sends the correct answers and explanations with each question, is in:
+
+`packages/opencode/src/tool/quiz.ts`
