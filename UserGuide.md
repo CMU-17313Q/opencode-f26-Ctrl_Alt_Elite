@@ -29,7 +29,7 @@ cd packages/opencode
 bun test test/quiz/generator.test.ts
 ```
 
-A successful run should show all 6 tests passing.
+A successful run should show all 7 tests passing.
 
 ### Automated Test Coverage
 
