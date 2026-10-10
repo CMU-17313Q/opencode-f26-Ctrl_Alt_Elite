@@ -271,3 +271,27 @@ The quiz generator, which asks the model for explanations and validates them, is
 The `quiz` tool, which sends the correct answers and explanations with each question, is in:
 
 `packages/opencode/src/tool/quiz.ts`
+
+## Studying Changes with /diff --details
+
+### Feature Overview
+
+The existing `/diff` command shows the raw git diff, which is hard to read if you don't already know what each line is doing. `/diff --details` was added to fix that. It is an optional flag that explains the changes in very simple English instead, with 2-3 sentences per changed file covering what changed and why it matters. It does not reproduce the raw diff or give a full code review, so students can quickly understand what the code is actually doing and be more ready for the quiz.
+
+This makes it a useful study aid: students can run `/diff --details` to understand their changes before taking a `/quiz`. Running `/diff` without the flag behaves exactly as before.
+
+Note: `/diff --details` is a standalone command. OpenCode command templates cannot invoke other slash commands, so `/quiz` does not call it automatically.
+
+### How to Test the Feature
+
+1. From the repository root, start OpenCode with `bun dev`, inside a project that is a git repository.
+2. Make a small uncommitted change in that project.
+3. Type `/diff --details` and press Enter.
+4. Check that the response explains each changed file in plain English rather than showing a raw diff.
+5. Type `/diff` (without the flag) and check that it behaves as before.
+
+### Implementation Files
+
+The `--details` flag is handled in:
+
+`packages/tui/src/component/prompt/index.tsx`
