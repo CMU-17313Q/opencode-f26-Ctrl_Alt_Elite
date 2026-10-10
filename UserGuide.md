@@ -223,9 +223,10 @@ cd packages/tui
 bun test test/question-feedback.test.ts
 cd ../opencode
 bun test test/quiz/generator.test.ts test/tool/quiz.test.ts
+bun test test/quiz/generator.fuzz.test.ts
 ```
 
-A successful run should show 7 tests passing in `packages/tui` and 10 tests passing in `packages/opencode`.
+A successful run should show 7 tests passing in `packages/tui` and 20 tests passing in `packages/opencode`.
 
 ### Automated Test Coverage
 
@@ -243,6 +244,8 @@ The logic that decides what feedback to show is in `questionFeedback`, a small f
 `packages/opencode/test/quiz/generator.test.ts` verifies that a generated question without an explanation is rejected, along with the existing checks that every question has at least two choices and exactly one correct answer.
 
 `packages/opencode/test/tool/quiz.test.ts` verifies that the `quiz` tool sends each question's `correctAnswer` and `explanation` to the question dock, while the tool's output to the agent still does not include the correct answers.
+
+`packages/opencode/test/quiz/generator.fuzz.test.ts` uses property-based fuzz testing (fast-check) to run `validateQuiz`, `checkAnswer` and the quiz schemas against thousands of random inputs. It checks that invalid questions are always rejected, valid ones are always accepted, and malformed input never crashes validation. It also documents one gap it found: a whitespace-only explanation is still accepted.
 
 Together these cover the acceptance criteria for this feature: the data needed for feedback is generated and validated on the server, it reaches the question dock, and the TUI computes the right result for correct, incorrect, and unanswered questions without affecting regular questions. Locking a question after it is submitted and the key bindings are UI behavior, so they are covered by the manual steps above.
 
