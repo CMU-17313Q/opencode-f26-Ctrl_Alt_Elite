@@ -1,0 +1,11 @@
+Project 3B - Actionlint Validation Evidence
+Owner: Farida Abouelnaga
+Branch: farida/actionlint-check
+
+Actionlint version:
+1.7.12
+installed by downloading from release page
+built with go1.26.1 compiler for darwin/arm64
+
+Validation results:
+Exit code: 0
