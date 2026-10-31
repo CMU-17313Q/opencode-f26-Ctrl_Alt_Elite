@@ -21,3 +21,5 @@ c40cb13a2bd7ba68a0f29d75ef1972ef69397e15:packages/http-recorder/test/record-repl
 c40cb13a2bd7ba68a0f29d75ef1972ef69397e15:packages/opencode/src/plugin/digitalocean.ts:generic-api-key:8
 c40cb13a2bd7ba68a0f29d75ef1972ef69397e15:packages/sdk/js/src/v2/gen/sdk.gen.ts:generic-api-key:5370
 c40cb13a2bd7ba68a0f29d75ef1972ef69397e15:packages/session-ui/src/components/tool-count-summary.tsx:generic-api-key:6
+c40cb13a2bd7ba68a0f29d75ef1972ef69397e15:packages/docs/ai-tools/cursor.mdx:curl-auth-header:127
+c40cb13a2bd7ba68a0f29d75ef1972ef69397e15:packages/http-recorder/test/record-replay.test.ts:gcp-api-key:138
