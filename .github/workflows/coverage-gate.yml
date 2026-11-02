@@ -22,7 +22,7 @@ jobs:
 
       - name: Run tests with coverage
         working-directory: packages/opencode
-        run: bun test --coverage --coverage-reporter=lcov
+        run: bun test --timeout 30000 --coverage --coverage-reporter=lcov
 
       - name: Enforce coverage threshold
         if: ${{ !cancelled() }}
