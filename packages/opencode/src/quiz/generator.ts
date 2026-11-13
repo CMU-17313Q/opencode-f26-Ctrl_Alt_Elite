@@ -6,6 +6,7 @@ import { ProviderTransform } from "@/provider/transform"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 
+const BANNED_EXTREME_WORDS = /(?:^|[^a-z0-9_])(?:always|never|only)(?=$|[^a-z0-9_])/i
 export const QuizOption = Schema.Struct({
   label: Schema.String,
   description: Schema.String,
@@ -28,10 +29,113 @@ export const Quiz = Schema.Struct({
 
 export type Quiz = typeof Quiz.Type
 
+export function isTrivialChange(analysis: string) {
+  const normalized = analysis.trim()
+  if (!normalized) return true
+
+  if (/^\s*$/u.test(normalized)) return true
+
+  if (/\brenamed?\s+to\b/i.test(normalized) || /->|=>/.test(normalized)) return true
+
+  return /^[\s\W_+\-=/{}\[\]();:,.<>!?'"\n\t]*$/u.test(normalized)
+}
+
+export function questionContainsCorrectAnswerLabel(question: QuizQuestion) {
+  const answer = question.correctAnswer.trim()
+  if (!answer) return false
+
+  const escaped = answer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const pattern = new RegExp(`(^|[^A-Za-z0-9_])${escaped}(?=$|[^A-Za-z0-9_])`, "i")
+  return pattern.test(question.question)
+}
+
+export function containsBannedExtremeWord(value: string) {
+  return BANNED_EXTREME_WORDS.test(value)
+}
+
+const STOP_WORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "as",
+  "at",
+  "be",
+  "by",
+  "for",
+  "from",
+  "function",
+  "how",
+  "if",
+  "in",
+  "is",
+  "it",
+  "its",
+  "not",
+  "of",
+  "on",
+  "or",
+  "that",
+  "the",
+  "their",
+  "there",
+  "this",
+  "to",
+  "was",
+  "were",
+  "what",
+  "when",
+  "where",
+  "which",
+  "why",
+  "with",
+  "without",
+])
+
+function extractIdentifierCandidates(text: string) {
+  return Array.from(text.matchAll(/\b[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*\b/g), (match) => match[0]).filter(
+    (identifier) =>
+      !STOP_WORDS.has(identifier.toLowerCase()) &&
+      (/[A-Z_]/.test(identifier) || identifier.includes("_")),
+  )
+}
+
+function extractChangedIdentifiers(analysis: string) {
+  const exactChanged = analysis.match(/\b([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s+(?:changed|updated|modified|fixed)\b/i)
+  if (exactChanged) return [exactChanged[1]]
+
+  const renamed = analysis.match(/\b([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s+renamed?\s+to\b/i)
+  if (renamed) return [renamed[1]]
+
+  return extractIdentifierCandidates(analysis)
+}
+
+export function isQuizQuestionGrounded(question: QuizQuestion, analysis: string) {
+  const changedIdentifiers = new Set(extractChangedIdentifiers(analysis).map((identifier) => identifier.toLowerCase()))
+  const questionIdentifiers = new Set(extractIdentifierCandidates(question.question).map((identifier) => identifier.toLowerCase()))
+
+  if (questionIdentifiers.size === 0) return false
+
+  for (const identifier of questionIdentifiers) {
+    if (!changedIdentifiers.has(identifier)) {
+      return false
+    }
+  }
+
+  return true
+}
+
 export function validateQuiz(quiz: Quiz) {
   for (const question of quiz.questions) {
     if (question.options.length < 2) {
       throw new Error("Quiz questions must contain at least two answer choices")
+    }
+
+    if (question.options.some((option) => !option.label.trim())) {
+      throw new Error("Each quiz option must have a non-empty label")
+    }
+
+    if (!question.explanation.trim()) {
+      throw new Error("Each quiz question must have an explanation")
     }
 
     const matchingAnswers = question.options.filter(
@@ -44,8 +148,16 @@ export function validateQuiz(quiz: Quiz) {
       )
     }
 
-    if (!question.explanation) {
-      throw new Error("Each quiz question must have an explanation")
+    if (questionContainsCorrectAnswerLabel(question)) {
+      throw new Error("Each quiz question must not contain the correct answer label in the question text")
+    }
+
+    if (
+      [question.question, ...question.options.map((option) => `${option.label} ${option.description}`)].some(
+        containsBannedExtremeWord,
+      )
+    ) {
+      throw new Error("Quiz questions and options must not use extreme wording like always, never, or only")
     }
   }
 }
@@ -64,6 +176,10 @@ export const generate = Effect.fn("Quiz.generate")(function* (input: {
     modelID: ModelV2.ID
   }
 }) {
+  if (isTrivialChange(input.analysis)) {
+    return { questions: [] }
+  }
+
   const provider = yield* Provider.Service
   const auth = yield* Auth.Service
 
