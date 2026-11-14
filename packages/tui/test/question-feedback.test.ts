@@ -53,7 +53,10 @@ describe("questionFeedback", () => {
     expect(questionFeedback(undefined, ["Allow index 0"])).toBeUndefined()
   })
 
-  test("falls back to an empty explanation when none was provided", () => {
-    expect(questionFeedback({ ...quizQuestion, explanation: undefined }, ["Allow index 0"])?.explanation).toBe("")
+  // R4: a missing explanation is labelled unavailable rather than shown as an empty line.
+  test("shows 'Explanation unavailable' when no explanation was provided", () => {
+    expect(questionFeedback({ ...quizQuestion, explanation: undefined }, ["Allow index 0"])?.explanation).toBe(
+      "Explanation unavailable",
+    )
   })
 })
