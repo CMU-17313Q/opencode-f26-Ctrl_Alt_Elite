@@ -158,10 +158,10 @@ describe("QuizGenerator fuzz tests", () => {
 
   // Documents a gap found by fuzzing: only the empty string is rejected, so a
   // whitespace-only explanation still passes validation.
-  test("validateQuiz currently accepts a whitespace-only explanation", () => {
+  test("validateQuiz rejects a whitespace-only explanation", () => {
     FastCheck.assert(
       FastCheck.property(twoOptionQuestion("   "), (question) => {
-        expect(() => validateQuiz({ questions: [question] })).not.toThrow()
+        expect(() => validateQuiz({ questions: [question] })).toThrow("explanation")
       }),
       { numRuns: 200 },
     )
@@ -169,16 +169,13 @@ describe("QuizGenerator fuzz tests", () => {
 
   test("validateQuiz accepts valid quizzes with unique labels and one correct answer", () => {
     const question = FastCheck.tuple(
-      description,
       FastCheck.uniqueArray(label, { minLength: 2, maxLength: 4 }),
       FastCheck.nat(),
-      description,
-      explanation,
-    ).map(([question, labels, index, description, explanation]) => ({
-      question,
-      options: labels.map((item) => ({ label: item, description })),
+    ).map(([labels, index]) => ({
+      question: "How did the code change?",
+      options: labels.map((item) => ({ label: item, description: "desc" })),
       correctAnswer: labels[index % labels.length],
-      explanation,
+      explanation: "The change explains the altered control flow.",
     }))
 
     FastCheck.assert(

@@ -32,6 +32,16 @@ export const QuizTool = Tool.define<typeof Parameters, Metadata, Question.Servic
             model: lastUser?.info.role === "user" ? lastUser.info.model : undefined,
           }).pipe(Effect.provideService(Provider.Service, provider), Effect.provideService(Auth.Service, auth))
 
+          if (quiz.questions.length === 0) {
+            return {
+              title: "No changes to quiz",
+              output: "There are no significant code changes to quiz on.",
+              metadata: {
+                answers: [] as ReadonlyArray<Question.Answer>,
+              },
+            }
+          }
+
           // correctAnswer and explanation are sent so the TUI can give feedback per question; the tool output omits them.
           const answers = yield* question.ask({
             sessionID: ctx.sessionID,
