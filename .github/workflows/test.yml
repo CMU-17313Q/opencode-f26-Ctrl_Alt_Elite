@@ -64,6 +64,14 @@ jobs:
         # contention issue typecheck.yml already caps for tsgo.
         run: GITHUB_ACTIONS=false bun turbo test --concurrency=4
 
+      # The package test scripts pass --only-failures, which hides passing test names.
+      # Re-run the Quiz Mode property tests without it so the log lists every property.
+      - name: Run Quiz Mode property tests
+        timeout-minutes: 5
+        run: |
+          (cd packages/opencode && bun test --timeout 30000 test/quiz/generator.property.test.ts)
+          (cd packages/tui && bun test --timeout 30000 test/question-feedback.property.test.ts)
+
       - name: Check generated client
         timeout-minutes: 5
         working-directory: packages/client

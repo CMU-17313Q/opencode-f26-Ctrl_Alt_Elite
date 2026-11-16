@@ -8,7 +8,7 @@ import { useSDK } from "../../context/sdk"
 import { SplitBorder } from "../../ui/border"
 import { useTuiConfig } from "../../config"
 import { useBindings, useOpencodeModeStack } from "../../keymap"
-import { questionFeedback, type QuestionFeedback } from "./question-feedback"
+import { questionFeedback, selectAnswer, type QuestionFeedback } from "./question-feedback"
 
 const QUESTION_MODE = "question"
 
@@ -79,9 +79,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
 
   function pick(answer: string, custom: boolean = false) {
     if (isSubmitted()) return
-    const answers = [...store.answers]
-    answers[store.tab] = [answer]
-    setStore("answers", answers)
+    setStore("answers", selectAnswer(store.answers, store.tab, answer))
     if (custom) {
       const inputs = [...store.custom]
       inputs[store.tab] = answer

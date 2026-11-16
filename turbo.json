@@ -42,6 +42,11 @@
     "@opencode-ai/session-ui#test": {
       "dependsOn": ["^build"],
       "outputs": []
+    },
+    // Quiz Mode feedback logic and its P4B property tests live in packages/tui.
+    "@opencode-ai/tui#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
     }
   }
 }
