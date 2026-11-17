@@ -9,6 +9,7 @@ import { SplitBorder } from "../../ui/border"
 import { useTuiConfig } from "../../config"
 import { useBindings, useOpencodeModeStack } from "../../keymap"
 import { questionFeedback, type QuestionFeedback } from "./question-feedback"
+import { answeredCount, pickAnswer, replyAnswers } from "./question-answers"
 
 const QUESTION_MODE = "question"
 
@@ -53,11 +54,10 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
   const isSubmitted = createMemo(() => hasFeedback())
 
   function submit() {
-    const answers = questions().map((_, i) => store.answers[i] ?? [])
     void sdk.client.question.reply({
       requestID: props.request.id,
       directory: props.directory,
-      answers,
+      answers: replyAnswers(store.answers, questions().length),
     })
   }
 
@@ -79,9 +79,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
 
   function pick(answer: string, custom: boolean = false) {
     if (isSubmitted()) return
-    const answers = [...store.answers]
-    answers[store.tab] = [answer]
-    setStore("answers", answers)
+    setStore("answers", pickAnswer(store.answers, store.tab, answer))
     if (custom) {
       const inputs = [...store.custom]
       inputs[store.tab] = answer
@@ -504,7 +502,9 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
 
         <Show when={confirm() && !single()}>
           <box paddingLeft={1}>
-            <text fg={theme.text}>Review</text>
+            <text fg={theme.text}>
+              Review ({answeredCount(store.answers, questions().length)}/{questions().length} answered)
+            </text>
           </box>
           <For each={questions()}>
             {(q, index) => {
